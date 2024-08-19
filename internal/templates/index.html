@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groupie Trackers</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <h1>Groupie Trackers</h1>
+    <nav>
+        <a href="/statistics" class="stats-link">View Statistics</a>
+    </nav>
+    <form action="/search" method="get" class="search-form">
+        <input type="text" name="q" placeholder="Search artists..." value="{{.SearchQuery}}">
+        <button type="submit">Search</button>
+    </form>
+    <div class="sort-options">
+        <label for="sort">Sort by:</label>
+        <select id="sort" onchange="sortArtists(this.value)">
+            <option value="">Default</option>
+            <option value="name" {{if eq .SortBy "name"}}selected{{end}}>Name</option>
+            <option value="creationDate" {{if eq .SortBy "creationDate"}}selected{{end}}>Creation Date</option>
+            <option value="firstAlbum" {{if eq .SortBy "firstAlbum"}}selected{{end}}>First Album</option>
+        </select>
+    </div>
+    <div class="container">
+        {{range .Artists}}
+        <div class="card">
+            <img src="{{.Image}}" alt="{{.Name}}">
+            <h2><a href="/artist?id={{.ID}}">{{.Name}}</a></h2>
+            <p>Created: {{.CreationDate}}</p>
+            <p>First Album: {{.FirstAlbum}}</p>
+            <p>Members: {{len .Members}}</p>
+        </div>
+        {{end}}
+    </div>
+    <div class="pagination">
+        {{if gt .CurrentPage 1}}
+            <a href="?page={{subtract .CurrentPage 1}}{{if .SearchQuery}}&q={{.SearchQuery}}{{end}}{{if .SortBy}}&sort={{.SortBy}}{{end}}">&laquo; Previous</a>
+        {{end}}
+        {{range $i := sequence .TotalPages}}
+            {{if eq $i $.CurrentPage}}
+                <a href="?page={{$i}}{{if $.SearchQuery}}&q={{$.SearchQuery}}{{end}}{{if $.SortBy}}&sort={{$.SortBy}}{{end}}" class="active">{{$i}}</a>
+            {{else}}
+                <a href="?page={{$i}}{{if $.SearchQuery}}&q={{$.SearchQuery}}{{end}}{{if $.SortBy}}&sort={{$.SortBy}}{{end}}">{{$i}}</a>
+            {{end}}
+        {{end}}
+        {{if lt .CurrentPage .TotalPages}}
+            <a href="?page={{add .CurrentPage 1}}{{if .SearchQuery}}&q={{.SearchQuery}}{{end}}{{if .SortBy}}&sort={{$.SortBy}}{{end}}">Next &raquo;</a>
+        {{end}}
+    </div>
+    <script>
+        function sortArtists(sortBy) {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('sort', sortBy);
+            window.location.search = urlParams.toString();
+        }
+    </script>
+</body>
+</html>
