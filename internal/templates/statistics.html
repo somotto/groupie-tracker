@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groupie Trackers Statistics</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Groupie Trackers Statistics</h1>
+    <nav>
+        <a href="/" class="home-link">Back to Home</a>
+    </nav>
+    <div class="stats-container">
+        <div class="chart-container">
+            <h2>Creation Years Distribution</h2>
+            <canvas id="creationYearChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h2>Member Count Distribution</h2>
+            <canvas id="memberCountChart"></canvas>
+        </div>
+    </div>
+    <script>
+        const creationYearData = JSON.parse('{{.CreationYearData}}');
+        const memberCountData = JSON.parse('{{.MemberCountData}}');
+
+        // Creation Year Chart
+        new Chart(document.getElementById('creationYearChart'), {
+            type: 'bar',
+            data: {
+                labels: Object.keys(creationYearData),
+                datasets: [{
+                    label: 'Number of Artists',
+                    data: Object.values(creationYearData),
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Artists'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Creation Year'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Member Count Chart
+        new Chart(document.getElementById('memberCountChart'), {
+            type: 'pie',
+            data: {
+                labels: Object.keys(memberCountData),
+                datasets: [{
+                    data: Object.values(memberCountData),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Member Count Distribution'
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
