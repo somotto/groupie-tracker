@@ -12,7 +12,7 @@
         <a href="/statistics" class="stats-link">View Statistics</a>
     </nav>
     <form action="/search" method="get" class="search-form">
-        <input type="text" name="q" placeholder="Search artists..." value="{{.SearchQuery}}">
+        <input type="text" name="q" placeholder="Search artists..." value="{{.SearchQuery}}" autocomplete="off">
         <button type="submit">Search</button>
     </form>
     <div class="sort-options">
