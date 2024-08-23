@@ -1,11 +1,12 @@
 package main
 
 import (
-	"groupie-trackers/internal/handlers"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"groupie-trackers/internal/handlers"
 )
 
 func main() {
@@ -15,6 +16,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Routes incoming requests to different handlers based on the request URL.
 	mux := http.NewServeMux()
 
 	// Serve static files
