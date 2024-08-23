@@ -1,27 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Groupie Trackers</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
+
 <body>
     <h1>Groupie Trackers</h1>
     <nav>
         <a href="/statistics" class="stats-link">View Statistics</a>
     </nav>
     <form action="/search" method="get" class="search-form">
-        <input type="text" name="q" placeholder="Search artists..." value="{{.SearchQuery}}" autocomplete="off">
+        <div class="input-text" style="display: flex;">
+            <input id="input-box" type="text" name="q" placeholder="Search artists..." value="{{.SearchQuery}}"
+                autocomplete="off">
+        </div>
         <button type="submit">Search</button>
+        <div class="result-box" style="display: flex;">
+
+        </div>
+
     </form>
     <div class="sort-options">
         <label for="sort">Sort by:</label>
         <select id="sort" onchange="sortArtists(this.value)">
             <option value="">Default</option>
-            <option value="name" {{if eq .SortBy "name"}}selected{{end}}>Name</option>
-            <option value="creationDate" {{if eq .SortBy "creationDate"}}selected{{end}}>Creation Date</option>
-            <option value="firstAlbum" {{if eq .SortBy "firstAlbum"}}selected{{end}}>First Album</option>
+            <option value="name" {{if eq .SortBy "name" }}selected{{end}}>Name</option>
+            <option value="creationDate" {{if eq .SortBy "creationDate" }}selected{{end}}>Creation Date</option>
+            <option value="firstAlbum" {{if eq .SortBy "firstAlbum" }}selected{{end}}>First Album</option>
         </select>
     </div>
     <div class="container">
@@ -37,25 +46,115 @@
     </div>
     <div class="pagination">
         {{if gt .CurrentPage 1}}
-            <a href="?page={{subtract .CurrentPage 1}}{{if .SearchQuery}}&q={{.SearchQuery}}{{end}}{{if .SortBy}}&sort={{.SortBy}}{{end}}">&laquo; Previous</a>
+        <a
+            href="?page={{subtract .CurrentPage 1}}{{if .SearchQuery}}&q={{.SearchQuery}}{{end}}{{if .SortBy}}&sort={{.SortBy}}{{end}}">&laquo;
+            Previous</a>
         {{end}}
         {{range $i := sequence .TotalPages}}
-            {{if eq $i $.CurrentPage}}
-                <a href="?page={{$i}}{{if $.SearchQuery}}&q={{$.SearchQuery}}{{end}}{{if $.SortBy}}&sort={{$.SortBy}}{{end}}" class="active">{{$i}}</a>
-            {{else}}
-                <a href="?page={{$i}}{{if $.SearchQuery}}&q={{$.SearchQuery}}{{end}}{{if $.SortBy}}&sort={{$.SortBy}}{{end}}">{{$i}}</a>
-            {{end}}
+        {{if eq $i $.CurrentPage}}
+        <a href="?page={{$i}}{{if $.SearchQuery}}&q={{$.SearchQuery}}{{end}}{{if $.SortBy}}&sort={{$.SortBy}}{{end}}"
+            class="active">{{$i}}</a>
+        {{else}}
+        <a
+            href="?page={{$i}}{{if $.SearchQuery}}&q={{$.SearchQuery}}{{end}}{{if $.SortBy}}&sort={{$.SortBy}}{{end}}">{{$i}}</a>
+        {{end}}
         {{end}}
         {{if lt .CurrentPage .TotalPages}}
-            <a href="?page={{add .CurrentPage 1}}{{if .SearchQuery}}&q={{.SearchQuery}}{{end}}{{if .SortBy}}&sort={{$.SortBy}}{{end}}">Next &raquo;</a>
+        <a
+            href="?page={{add .CurrentPage 1}}{{if .SearchQuery}}&q={{.SearchQuery}}{{end}}{{if .SortBy}}&sort={{$.SortBy}}{{end}}">Next
+            &raquo;</a>
         {{end}}
     </div>
     <script>
+
+        let allAvailableKeyWords = [
+            'Queen',
+            'Soja',
+            'Pink Floyd',
+            'Floyd',
+            'Scorpions',
+            'XXXTentacion',
+            'Joyner Lucas',
+            'Kendrick Lamar',
+            'ACDC',
+            'Pearl Jam',
+            'Jam',
+            'Lamar',
+            'Lucas',
+            'Katy Perry',
+            'Perry',
+            'Rihana',
+            'Genesis',
+            'Phil Collins',
+            'Collins',
+            'Led Zeppelin',
+            'Zeppelin',
+            'The Jimi Hendrix Experience',
+            'Jimi Hendrix Experience',
+            'Hendrix Experience',
+            'Experience',
+            'Bee Gees',
+            'Gees',
+            'Aerosmith',
+            'Dire Straits',
+            'Straits',
+            'Deep Purple',
+            'Purple',
+            'Mamonas Assasins',
+            'Assassins',
+            'Thirty Seconds to Mars',
+            'Seconds to Mars',
+            'Mars',
+            'Imagine Dragons',
+            'Juice Wrld',
+            'Logic',
+            'R3HAB',
+            'Bobby McFerrins',
+            'Alec Benjamin',
+            'Post Malon',
+            'Travis Scott',
+            'J. Cole',
+            'Nickelback',
+            'Mobb Deep',
+            'U2',
+            'NWA',
+            'Guns N Roses',
+            'Arctic Monkeys',
+            'Fall Out Boy',
+            'Eagles',
+            'Gorillaz',
+            'Linkin Park',
+            'Red Hot Chili Peppers',
+            'Eminem',
+            'Green Day',
+            'Coldplay',
+            'Metallica',
+            'Marron 5',
+            'Twenty One Pilots',
+            'The Rolling Stones',
+            'Muse',
+            'Foo Fighters',
+            'The Chainsmokers',
+        ];
+        const resultBox = document.querySelector(".result-box");
+        const inputBox = document.getElementById("input-box");
+        inputBox.onekeyup = function () {
+            let result = [];
+            let input = inputBox.value;
+            if (inputBox.length) {
+                result = allAvailableKeyWords.filter((keyword)=>{
+                    return keyword.toLowerCase().includes(input.toLowerCase());
+                });
+                console.log(result);
+            }
+        }
         function sortArtists(sortBy) {
             const urlParams = new URLSearchParams(window.location.search);
             urlParams.set('sort', sortBy);
             window.location.search = urlParams.toString();
         }
+
     </script>
 </body>
+
 </html>
