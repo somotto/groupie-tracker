@@ -5,41 +5,40 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"groupie-trackers/internal/cache"
 	"groupie-trackers/internal/models"
 )
 
-// define the number of artists to be shown per page and the duration of one cache.
 const (
 	artistsPerPage = 10
 	cacheDuration  = 5 * time.Minute
 )
 
-// Creates caches for storing lists of artists and individual artist details to reduce repeated API calls.
 var (
-	artistsCache = cache.NewCache()
-	artistCache  = cache.NewCache()
+	artistsCache   = cache.NewCache()
+	artistCache    = cache.NewCache()
 	locationsCache = cache.NewCache()
+	concertsCache  = cache.NewCache()
+	templateCache  = make(map[string]*template.Template)
+	templateMutex  = &sync.RWMutex{}
 )
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	handleArtists(w, r, "")
 }
 
-// Handles search queries for artists based on the `q` parameter in the URL.
 func SearchHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	handleArtists(w, r, query)
 }
 
-// It fetches artist data, renders the artist.html template with the artist's details, and serves it to the client.
 func ArtistHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	id, err := strconv.Atoi(idStr)
@@ -54,7 +53,7 @@ func ArtistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles(filepath.Join("internal", "templates", "artist.html"))
+	tmpl, err := getTemplate("artist.html")
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -105,7 +104,7 @@ func handleArtists(w http.ResponseWriter, r *http.Request, searchQuery string) {
 		SortBy:      sortBy,
 	}
 
-	tmpl, err := parseTemplate("index.html")
+	tmpl, err := getTemplate("index.html")
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -117,23 +116,30 @@ func handleArtists(w http.ResponseWriter, r *http.Request, searchQuery string) {
 	}
 }
 
-// Reads and parses HTML templates from files, allowing custom functions like subtract, add, and sequence to be used within temp
+func getTemplate(filename string) (*template.Template, error) {
+	templateMutex.RLock()
+	tmpl, found := templateCache[filename]
+	templateMutex.RUnlock()
+
+	if found {
+		return tmpl, nil
+	}
+
+	templateMutex.Lock()
+	defer templateMutex.Unlock()
+
+	tmpl, err := parseTemplate(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	templateCache[filename] = tmpl
+	return tmpl, nil
+}
+
 func parseTemplate(filename string) (*template.Template, error) {
 	tmplPath := filepath.Join("internal", "templates", filename)
-
-	// Check if the file exists
-	if _, err := os.Stat(tmplPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("template file does not exist: %s", tmplPath)
-	}
-
-	// Try to read the file content
-	content, err := os.ReadFile(tmplPath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading template file: %v", err)
-	}
-
-	// Parse the template
-	tmpl, err := template.New(filename).Funcs(template.FuncMap{
+	return template.New(filename).Funcs(template.FuncMap{
 		"subtract": func(a, b int) int { return a - b },
 		"add":      func(a, b int) int { return a + b },
 		"sequence": func(n int) []int {
@@ -143,15 +149,9 @@ func parseTemplate(filename string) (*template.Template, error) {
 			}
 			return seq
 		},
-	}).Parse(string(content))
-	if err != nil {
-		return nil, fmt.Errorf("error parsing template content: %v", err)
-	}
-
-	return tmpl, nil
+	}).ParseFiles(tmplPath)
 }
 
-// Fetches the list of artists from an external API, caches the result, and returns it. If the data is already cached, it uses the cached version.
 func fetchArtists() ([]models.Artist, error) {
 	if cachedArtists, found := artistsCache.Get("artists"); found {
 		return cachedArtists.([]models.Artist), nil
@@ -173,36 +173,46 @@ func fetchArtists() ([]models.Artist, error) {
 	return artists, nil
 }
 
-// Fetches details for a specific artist, including related data, and caches the result. Uses cached data if available.
 func fetchArtistDetails(id int) (models.Artist, error) {
 	cacheKey := fmt.Sprintf("artist_%d", id)
 	if cachedArtist, found := artistCache.Get(cacheKey); found {
 		return cachedArtist.(models.Artist), nil
 	}
 
-	resp, err := http.Get(fmt.Sprintf("https://groupietrackers.herokuapp.com/api/artists/%d", id))
-	if err != nil {
-		return models.Artist{}, err
-	}
-	defer resp.Body.Close()
-
 	var artist models.Artist
-	err = json.NewDecoder(resp.Body).Decode(&artist)
-	if err != nil {
-		return models.Artist{}, err
-	}
-
-	relationsResp, err := http.Get(artist.Relations)
-	if err != nil {
-		return models.Artist{}, err
-	}
-	defer relationsResp.Body.Close()
-
 	var relations struct {
 		DatesLocations map[string][]string `json:"datesLocations"`
 	}
-	err = json.NewDecoder(relationsResp.Body).Decode(&relations)
-	if err != nil {
+
+	artistChan := make(chan error, 1)
+	relationsChan := make(chan error, 1)
+
+	go func() {
+		resp, err := http.Get(fmt.Sprintf("https://groupietrackers.herokuapp.com/api/artists/%d", id))
+		if err != nil {
+			artistChan <- err
+			return
+		}
+		defer resp.Body.Close()
+		err = json.NewDecoder(resp.Body).Decode(&artist)
+		artistChan <- err
+	}()
+
+	go func() {
+		resp, err := http.Get(fmt.Sprintf("https://groupietrackers.herokuapp.com/api/relation/%d", id))
+		if err != nil {
+			relationsChan <- err
+			return
+		}
+		defer resp.Body.Close()
+		err = json.NewDecoder(resp.Body).Decode(&relations)
+		relationsChan <- err
+	}()
+
+	if err := <-artistChan; err != nil {
+		return models.Artist{}, err
+	}
+	if err := <-relationsChan; err != nil {
 		return models.Artist{}, err
 	}
 
@@ -240,113 +250,144 @@ func sortArtists(artists []models.Artist, sortBy string) {
 	}
 }
 
-// It fetches all artist data, calculates statistics, and renders them in the statistics.html template.
-func StatisticsHandler(w http.ResponseWriter, r *http.Request) {
-	artists, err := fetchArtists()
+func ConcertsHandler(w http.ResponseWriter, r *http.Request) {
+	artistConcerts, err := fetchArtistConcerts()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error fetching artist concerts: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	stats := calculateStatistics(artists)
-
-	tmpl, err := template.ParseFiles(filepath.Join("internal", "templates", "statistics.html"))
+	tmpl, err := getTemplate("concerts.html")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	err = tmpl.Execute(w, stats)
+	data := struct {
+		ArtistConcerts map[string]map[string][]string
+	}{
+		ArtistConcerts: artistConcerts,
+	}
+
+	err = tmpl.Execute(w, data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
 
-func calculateStatistics(artists []models.Artist) models.Statistics {
-	var stats models.Statistics
-	creationYears := make(map[int]int)
-	memberCounts := make(map[int]int)
-
-	for _, artist := range artists {
-		creationYears[artist.CreationDate]++
-		memberCounts[len(artist.Members)]++
+func fetchArtistConcerts() (map[string]map[string][]string, error) {
+	if cachedConcerts, found := concertsCache.Get("artistConcerts"); found {
+		return cachedConcerts.(map[string]map[string][]string), nil
 	}
 
-	stats.CreationYearData = creationYears
-	stats.MemberCountData = memberCounts
+	artists, err := fetchArtists()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching artists: %v", err)
+	}
 
-	return stats
+	artistConcerts := make(map[string]map[string][]string)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for _, artist := range artists {
+		wg.Add(1)
+		go func(a models.Artist) {
+			defer wg.Done()
+			artistDetails, err := fetchArtistDetails(a.ID)
+			if err != nil {
+				fmt.Printf("Error fetching details for artist %s: %v\n", a.Name, err)
+				return
+			}
+			mu.Lock()
+			artistConcerts[a.Name] = artistDetails.RelationsData
+			mu.Unlock()
+		}(artist)
+	}
+
+	wg.Wait()
+
+	concertsCache.Set("artistConcerts", artistConcerts, cacheDuration)
+	return artistConcerts, nil
 }
 
 func LocationsHandler(w http.ResponseWriter, r *http.Request) {
-    artistLocations, err := fetchArtistLocations()
-    if err != nil {
-        http.Error(w, fmt.Sprintf("Error fetching artist locations: %v", err), http.StatusInternalServerError)
-        return
-    }
+	artistLocations, err := fetchArtistLocations()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error fetching artist locations: %v", err), http.StatusInternalServerError)
+		return
+	}
 
-    tmpl, err := template.ParseFiles(filepath.Join("internal", "templates", "locations.html"))
-    if err != nil {
-        http.Error(w, "Internal server error", http.StatusInternalServerError)
-        return
-    }
+	tmpl, err := getTemplate("locations.html")
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
-    data := struct {
-        ArtistLocations map[string][]string
-    }{
-        ArtistLocations: artistLocations,
-    }
+	data := struct {
+		ArtistLocations map[string][]string
+	}{
+		ArtistLocations: artistLocations,
+	}
 
-    err = tmpl.Execute(w, data)
-    if err != nil {
-        http.Error(w, "Internal server error", http.StatusInternalServerError)
-    }
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }
 
-
-// Fetches locations from the API and caches them
 func fetchArtistLocations() (map[string][]string, error) {
-    if cachedLocations, found := locationsCache.Get("artistLocations"); found {
-        return cachedLocations.(map[string][]string), nil
-    }
+	if cachedLocations, found := locationsCache.Get("artistLocations"); found {
+		return cachedLocations.(map[string][]string), nil
+	}
 
-    artists, err := fetchArtists()
-    if err != nil {
-        return nil, fmt.Errorf("error fetching artists: %v", err)
-    }
+	artistConcerts, err := fetchArtistConcerts()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching artist concerts: %v", err)
+	}
 
-    artistLocations := make(map[string][]string)
+	artistLocations := make(map[string][]string)
+	for artistName, concerts := range artistConcerts {
+		var locations []string
+		for location := range concerts {
+			locations = append(locations, location)
+		}
+		artistLocations[artistName] = locations
+	}
 
-    for _, artist := range artists {
-        relations, err := fetchRelations(artist.Relations)
-        if err != nil {
-            return nil, fmt.Errorf("error fetching relations for artist %s: %v", artist.Name, err)
-        }
-
-        var locations []string
-        for location := range relations.DatesLocations {
-            locations = append(locations, location)
-        }
-
-        artistLocations[artist.Name] = locations
-    }
-
-    locationsCache.Set("artistLocations", artistLocations, cacheDuration)
-    return artistLocations, nil
+	locationsCache.Set("artistLocations", artistLocations, cacheDuration)
+	return artistLocations, nil
 }
 
-func fetchRelations(relationsURL string) (*models.Relations, error) {
-    resp, err := http.Get(relationsURL)
-    if err != nil {
-        return nil, err
-    }
-    defer resp.Body.Close()
+func DatesHandler(w http.ResponseWriter, r *http.Request) {
+	artistConcerts, err := fetchArtistConcerts()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error fetching artist concerts: %v", err), http.StatusInternalServerError)
+		return
+	}
 
-    var relations models.Relations
-    err = json.NewDecoder(resp.Body).Decode(&relations)
-    if err != nil {
-        return nil, err
-    }
+	artistDates := make(map[string][]string)
+	for artistName, concertData := range artistConcerts {
+		var allDates []string
+		for _, dates := range concertData {
+			allDates = append(allDates, dates...)
+		}
+		artistDates[artistName] = allDates
+	}
 
-    return &relations, nil
+	tmpl, err := getTemplate("dates.html")
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		ArtistDates map[string][]string
+	}{
+		ArtistDates: artistDates,
+	}
+
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }
