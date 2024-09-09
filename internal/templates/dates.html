@@ -3,26 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artist Locations - Groupie Trackers</title>
+    <title>Artist Concert Dates</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <header>
-        <h1>Artist Concert Locations</h1>
+        <h1>Artist Concert Dates</h1>
         <nav>
             <a href="/">Home</a>
             <a href="/concerts">Concerts</a>
-            <a href="/dates">Dates</a>
-            <a href="/locations" class="active">Locations</a>
+            <a href="/dates" class="active">Dates</a> <!-- Highlight the active "Dates" page -->
+            <a href="/locations">Locations</a>
         </nav>
     </header>
-    <main class="artist-locations-container">
-        {{range $artist, $locations := .ArtistLocations}}
+    <main class="artist-concerts-container">
+        {{range $artistName, $dates := .ArtistDates}}
         <section class="artist-item">
-            <h2>{{$artist}}</h2>
+            <h2>{{$artistName}}</h2>
             <ul class="location-list">
-                {{range $locations}}
-                <li>{{.}}</li>
+                {{range $date := $dates}}
+                <li>{{ $date }}</li>
                 {{end}}
             </ul>
         </section>
