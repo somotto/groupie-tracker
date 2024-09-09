@@ -25,11 +25,6 @@ type ArtistPageData struct {
 	Artist Artist
 }
 
-type Statistics struct {
-	CreationYearData map[int]int
-	MemberCountData  map[int]int
-}
-
 type Relations struct {
     DatesLocations map[string][]string `json:"datesLocations"`
 }
