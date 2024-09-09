@@ -28,6 +28,7 @@ func main() {
 	mux.HandleFunc("/search", handlers.SearchHandler)
 	mux.HandleFunc("/artist", handlers.ArtistHandler)
 	mux.HandleFunc("/statistics", handlers.StatisticsHandler)
+	mux.HandleFunc("/locations", handlers.LocationsHandler)
 
 	log.Println("Server is running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))

@@ -26,6 +26,7 @@ const (
 var (
 	artistsCache = cache.NewCache()
 	artistCache  = cache.NewCache()
+	locationsCache = cache.NewCache()
 )
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -275,4 +276,77 @@ func calculateStatistics(artists []models.Artist) models.Statistics {
 	stats.MemberCountData = memberCounts
 
 	return stats
+}
+
+func LocationsHandler(w http.ResponseWriter, r *http.Request) {
+    artistLocations, err := fetchArtistLocations()
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Error fetching artist locations: %v", err), http.StatusInternalServerError)
+        return
+    }
+
+    tmpl, err := template.ParseFiles(filepath.Join("internal", "templates", "locations.html"))
+    if err != nil {
+        http.Error(w, "Internal server error", http.StatusInternalServerError)
+        return
+    }
+
+    data := struct {
+        ArtistLocations map[string][]string
+    }{
+        ArtistLocations: artistLocations,
+    }
+
+    err = tmpl.Execute(w, data)
+    if err != nil {
+        http.Error(w, "Internal server error", http.StatusInternalServerError)
+    }
+}
+
+
+// Fetches locations from the API and caches them
+func fetchArtistLocations() (map[string][]string, error) {
+    if cachedLocations, found := locationsCache.Get("artistLocations"); found {
+        return cachedLocations.(map[string][]string), nil
+    }
+
+    artists, err := fetchArtists()
+    if err != nil {
+        return nil, fmt.Errorf("error fetching artists: %v", err)
+    }
+
+    artistLocations := make(map[string][]string)
+
+    for _, artist := range artists {
+        relations, err := fetchRelations(artist.Relations)
+        if err != nil {
+            return nil, fmt.Errorf("error fetching relations for artist %s: %v", artist.Name, err)
+        }
+
+        var locations []string
+        for location := range relations.DatesLocations {
+            locations = append(locations, location)
+        }
+
+        artistLocations[artist.Name] = locations
+    }
+
+    locationsCache.Set("artistLocations", artistLocations, cacheDuration)
+    return artistLocations, nil
+}
+
+func fetchRelations(relationsURL string) (*models.Relations, error) {
+    resp, err := http.Get(relationsURL)
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Body.Close()
+
+    var relations models.Relations
+    err = json.NewDecoder(resp.Body).Decode(&relations)
+    if err != nil {
+        return nil, err
+    }
+
+    return &relations, nil
 }

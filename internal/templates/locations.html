@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artist Locations - Groupie Trackers</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Artist Locations</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/statistics">Statistics</a>
+            <a href="/locations" class="active">Locations</a>
+        </nav>
+    </header>
+    <main class="artist-locations-container">
+        {{range $artist, $locations := .ArtistLocations}}
+        <section class="artist-item">
+            <h2>{{$artist}}</h2>
+            <ul class="location-list">
+                {{range $locations}}
+                <li>{{.}}</li>
+                {{end}}
+            </ul>
+        </section>
+        {{end}}
+    </main>
+    <footer>
+        <p>&copy; 2024 Groupie Trackers. All rights reserved.</p>
+    </footer>
+</body>
+</html>
