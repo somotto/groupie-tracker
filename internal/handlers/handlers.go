@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -30,6 +31,17 @@ var (
 	templateMutex  = &sync.RWMutex{}
 )
 
+func renderErrorPage(w http.ResponseWriter, message string, statusCode int) {
+	template, err := getTemplate("error.html")
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(statusCode)
+	value := models.PageData{ErrorMessage: message}
+	template.Execute(w, value)
+}
+
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	handleArtists(w, r, "")
 }
@@ -43,19 +55,19 @@ func ArtistHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "Invalid artist ID", http.StatusBadRequest)
+		renderErrorPage(w, "Invalid artist ID", http.StatusBadRequest)
 		return
 	}
 
 	artist, err := fetchArtistDetails(id)
 	if err != nil {
-		http.Error(w, "Error fetching artist details", http.StatusInternalServerError)
+		renderErrorPage(w, "Error fetching artist details", http.StatusInternalServerError)
 		return
 	}
 
 	tmpl, err := getTemplate("artist.html")
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		renderErrorPage(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -65,7 +77,7 @@ func ArtistHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = tmpl.Execute(w, data)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		renderErrorPage(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
 
@@ -106,13 +118,13 @@ func handleArtists(w http.ResponseWriter, r *http.Request, searchQuery string) {
 
 	tmpl, err := getTemplate("index.html")
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		renderErrorPage(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	err = tmpl.Execute(w, pageData)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		renderErrorPage(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
 
@@ -253,13 +265,13 @@ func sortArtists(artists []models.Artist, sortBy string) {
 func ConcertsHandler(w http.ResponseWriter, r *http.Request) {
 	artistConcerts, err := fetchArtistConcerts()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching artist concerts: %v", err), http.StatusInternalServerError)
+		renderErrorPage(w, fmt.Sprintf("Error fetching artist concerts: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	tmpl, err := getTemplate("concerts.html")
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		renderErrorPage(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -271,7 +283,8 @@ func ConcertsHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = tmpl.Execute(w, data)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		renderErrorPage(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -313,13 +326,13 @@ func fetchArtistConcerts() (map[string]map[string][]string, error) {
 func LocationsHandler(w http.ResponseWriter, r *http.Request) {
 	artistLocations, err := fetchArtistLocations()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching artist locations: %v", err), http.StatusInternalServerError)
+		renderErrorPage(w, "Error fetching artist locations", http.StatusInternalServerError)
 		return
 	}
 
 	tmpl, err := getTemplate("locations.html")
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		renderErrorPage(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -331,7 +344,8 @@ func LocationsHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = tmpl.Execute(w, data)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		renderErrorPage(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -361,7 +375,7 @@ func fetchArtistLocations() (map[string][]string, error) {
 func DatesHandler(w http.ResponseWriter, r *http.Request) {
 	artistConcerts, err := fetchArtistConcerts()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching artist concerts: %v", err), http.StatusInternalServerError)
+		renderErrorPage(w, "Error fetching artist concerts", http.StatusInternalServerError)
 		return
 	}
 
@@ -376,7 +390,7 @@ func DatesHandler(w http.ResponseWriter, r *http.Request) {
 
 	tmpl, err := getTemplate("dates.html")
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		renderErrorPage(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -388,6 +402,22 @@ func DatesHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = tmpl.Execute(w, data)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		renderErrorPage(w, "Internal server error", http.StatusInternalServerError)
 	}
+}
+
+func ServeStatic(w http.ResponseWriter, r *http.Request) {
+	file := "." + r.URL.Path
+
+	info, err := os.Stat(file)
+	if err != nil {
+		renderErrorPage(w, "404 File not found", http.StatusNotFound)
+		return
+	}
+
+	if info.IsDir() {
+		renderErrorPage(w, "404 File not Found", http.StatusNotFound)
+		return
+	}
+	http.ServeFile(w, r, file)
 }
