@@ -21,17 +21,33 @@ func main() {
 	}
 
 	// Register handlers
+	http.HandleFunc("/", handler)
 	http.HandleFunc("/static/", handlers.ServeStatic)
-	http.HandleFunc("/", handlers.HomeHandler)
-	http.HandleFunc("/search", handlers.SearchHandler)
-	http.HandleFunc("/artist", handlers.ArtistHandler)
-	http.HandleFunc("/dates", handlers.DatesHandler)
-	http.HandleFunc("/concerts", handlers.ConcertsHandler)
-	http.HandleFunc("/locations", handlers.LocationsHandler)
 
-	port := ":8000"
+	port := ":8080"
 
 	fmt.Printf("Server is running on http://localhost%s", port)
 
 	log.Fatal(http.ListenAndServe(port, nil))
+}
+
+// Handle different URL paths
+func handler(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/":
+		handlers.HomeHandler(w, r)
+	case "/search":
+		handlers.SearchHandler(w, r)
+	case "/artist":
+		handlers.ArtistHandler(w, r)
+	case "/dates":
+		handlers.DatesHandler(w, r)
+	case "/concerts":
+		handlers.ConcertsHandler(w, r)
+	case "/locations":
+		handlers.LocationsHandler(w, r)
+	default:
+		handlers.RenderErrorPage(w, "404: Page not found", http.StatusNotFound)
+		return
+	}
 }
