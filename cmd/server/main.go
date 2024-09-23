@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,27 +11,27 @@ import (
 )
 
 func main() {
+	if len(os.Args) != 1 {
+		return
+	}
 	// Change the working directory to the project root
 	err := os.Chdir(filepath.Join("..", ".."))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Routes incoming requests to different handlers based on the request URL.
-	mux := http.NewServeMux()
-
-	// Serve static files
-	fs := http.FileServer(http.Dir("./static"))
-	mux.Handle("/static/", http.StripPrefix("/static/", fs))
-
 	// Register handlers
-	mux.HandleFunc("/", handlers.HomeHandler)
-	mux.HandleFunc("/search", handlers.SearchHandler)
-	mux.HandleFunc("/artist", handlers.ArtistHandler)
-	mux.HandleFunc("/dates", handlers.DatesHandler)
-	mux.HandleFunc("/concerts", handlers.ConcertsHandler)
-	mux.HandleFunc("/locations", handlers.LocationsHandler)
+	http.HandleFunc("/static/", handlers.ServeStatic)
+	http.HandleFunc("/", handlers.HomeHandler)
+	http.HandleFunc("/search", handlers.SearchHandler)
+	http.HandleFunc("/artist", handlers.ArtistHandler)
+	http.HandleFunc("/dates", handlers.DatesHandler)
+	http.HandleFunc("/concerts", handlers.ConcertsHandler)
+	http.HandleFunc("/locations", handlers.LocationsHandler)
 
-	log.Println("Server is running on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	port := ":8000"
+
+	fmt.Printf("Server is running on http://localhost%s", port)
+
+	log.Fatal(http.ListenAndServe(port, nil))
 }
