@@ -26,14 +26,14 @@ The API consists of four main parts:
 1. Clone the repository
 
 ```go
-    $ git clone https://learn.zone01kisumu.ke/git/skisenge/groupie-tracker.git
+    git clone https://learn.zone01kisumu.ke/git/skisenge/groupie-tracker.git
 ```
 
 2. Navigate to root directory and run the script to start the server
 
 ```bash
-    $ cd groupie-tracker
-    $ ./run.sh
+    cd groupie-tracker
+    ./run.sh
 ```
 
 3. Open a web browser and visit `http://localhost:8080`
@@ -51,8 +51,8 @@ The API consists of four main parts:
 To run the unit tests, use the following command:
 
 ```bash
-    $ cd internal/handlers
-    $ go test -v
+    cd internal/handlers
+    go test -v
 ```
 
 ## Contributing
