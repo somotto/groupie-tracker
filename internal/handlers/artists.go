@@ -1,13 +1,14 @@
 package handlers
 
 import (
-	"groupie-trackers/internal/models"
 	"log"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"groupie-trackers/internal/models"
 )
 
 func ArtistHandler(w http.ResponseWriter, r *http.Request) {
