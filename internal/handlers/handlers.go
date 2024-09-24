@@ -90,8 +90,7 @@ func ArtistHandler(w http.ResponseWriter, r *http.Request) {
 func handleArtists(w http.ResponseWriter, r *http.Request, searchQuery string) {
 	page, err := strconv.Atoi(r.URL.Query().Get("page"))
 	if err != nil || page < 1 || page > 6 {
-		log.Println("Invalid search query string", err, page)
-		http.Error(w, "400: Bad Request", http.StatusBadRequest)
+		page = 1
 	}
 
 	sortBy := r.URL.Query().Get("sort")
