@@ -60,9 +60,9 @@ func (ts *TestSuite) TestTemplateRendering() {
 
 func (ts *TestSuite) TestSortArtists() {
 	artists := []models.Artist{
-		{Name: "C Artist", CreationDate: 2000, FirstAlbum: "2002-01-01"},
-		{Name: "A Artist", CreationDate: 2010, FirstAlbum: "2012-01-01"},
-		{Name: "B Artist", CreationDate: 2005, FirstAlbum: "2007-01-01"},
+		{Name: "C Artist", CreationDate: 2000, FirstAlbum: "01-01-2002"},
+		{Name: "A Artist", CreationDate: 2010, FirstAlbum: "01-01-2012"},
+		{Name: "B Artist", CreationDate: 2005, FirstAlbum: "01-01-2007"},
 	}
 
 	sortArtists(artists, "creationDate")
@@ -74,8 +74,8 @@ func (ts *TestSuite) TestSortArtists() {
 		ts.t.Errorf("Expected sorted artists, got %v, want %v", artists[0].Name, "C Artist")
 	}
 	sortArtists(artists, "firstAlbum")
-	if artists[0].FirstAlbum != "2002-01-01" {
-		ts.t.Errorf("Expected sorted artists, got %v, want %v", artists[0].FirstAlbum, "2002-01-01")
+	if artists[0].FirstAlbum != "01-01-2002" {
+		ts.t.Errorf("Expected sorted artists, got %v, want %v", artists[0].FirstAlbum, "01-01-2002")
 	}
 }
 
