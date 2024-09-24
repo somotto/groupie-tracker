@@ -37,8 +37,11 @@ groupie-tracker
 │  ├─ cache
 │  │  └─ cache.go
 │  ├─ handlers
+│  │  ├─ artists.go
+│  │  ├─ fetch.go
 │  │  ├─ handlers.go
-│  │  └─ handlers_test.go
+│  │  ├─ handlers_test.go
+│  │  └─ relations.go
 │  ├─ models
 │  │  └─ models.go
 │  └─ templates
