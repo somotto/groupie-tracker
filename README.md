@@ -1,5 +1,7 @@
 # Groupie Trackers
 
+![alt text](image.png)
+
 ## Overview
 
 Groupie Trackers is a web application that manipulates and displays data from a given API about bands and artists. The project focuses on creating a user-friendly interface to visualize information about artists, their concert locations, dates, and the relationships between these data points.
@@ -33,12 +35,16 @@ groupie-tracker
 │  └─ server
 │     └─ main.go
 ├─ go.mod
+├─ image.png
 ├─ internal
 │  ├─ cache
 │  │  └─ cache.go
 │  ├─ handlers
+│  │  ├─ artists.go
+│  │  ├─ fetch.go
 │  │  ├─ handlers.go
-│  │  └─ handlers_test.go
+│  │  ├─ handlers_test.go
+│  │  └─ relations.go
 │  ├─ models
 │  │  └─ models.go
 │  └─ templates
