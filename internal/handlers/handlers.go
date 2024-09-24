@@ -89,7 +89,7 @@ func ArtistHandler(w http.ResponseWriter, r *http.Request) {
 
 func handleArtists(w http.ResponseWriter, r *http.Request, searchQuery string) {
 	page, err := strconv.Atoi(r.URL.Query().Get("page"))
-	if err != nil || page < 1 {
+	if err != nil || page < 1 || page > 6 {
 		page = 1
 	}
 
