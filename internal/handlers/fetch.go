@@ -3,9 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"groupie-trackers/internal/models"
 	"net/http"
 	"sync"
+
+	"groupie-trackers/internal/models"
 )
 
 func fetchArtists() ([]models.Artist, error) {
