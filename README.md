@@ -23,6 +23,40 @@ The API consists of four main parts:
 
 ## Setup and Installation
 
+### File Structure
+
+```bash
+groupie-tracker
+├─ LICENSE
+├─ README.md
+├─ cmd
+│  └─ server
+│     └─ main.go
+├─ go.mod
+├─ internal
+│  ├─ cache
+│  │  └─ cache.go
+│  ├─ handlers
+│  │  ├─ handlers.go
+│  │  └─ handlers_test.go
+│  ├─ models
+│  │  └─ models.go
+│  └─ templates
+│     ├─ artist.html
+│     ├─ concerts.html
+│     ├─ dates.html
+│     ├─ error.html
+│     ├─ index.html
+│     └─ locations.html
+├─ run.sh
+└─ static
+   └─ css
+      └─ style.css
+
+```
+
+### Setup
+
 1. Clone the repository
 
 ```go
