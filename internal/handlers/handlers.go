@@ -266,7 +266,13 @@ func sortArtists(artists []models.Artist, sortBy string) {
 		})
 	case "firstAlbum":
 		sort.Slice(artists, func(i, j int) bool {
-			return artists[i].FirstAlbum < artists[j].FirstAlbum
+			dateI, errI := time.Parse("02-01-2006", artists[i].FirstAlbum)
+			dateJ, errJ := time.Parse("02-01-2006", artists[j].FirstAlbum)
+			if errI != nil || errJ != nil {
+				log.Println("Error parsing date:", errI, errJ)
+				return artists[i].FirstAlbum < artists[j].FirstAlbum
+			}
+			return dateI.Before(dateJ)
 		})
 	}
 }
