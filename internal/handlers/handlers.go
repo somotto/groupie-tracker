@@ -20,7 +20,7 @@ import (
 
 const (
 	artistsPerPage = 10
-	cacheDuration  = 5 * time.Minute
+	cacheDuration  = 60 * time.Minute
 )
 
 var (
